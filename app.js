@@ -318,6 +318,7 @@
       document.getElementById('sheetTitle').textContent = 'Neuer Eintrag';
       form.reset();
       document.getElementById('fDate').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('fContractEnd').value = new Date().toISOString().slice(0, 10);
       buildCatPicker(categories[0] ? categories[0].id : FALLBACK_CATEGORY_ID);
       deleteRow.style.display = 'none';
     }
