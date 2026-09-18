@@ -60,7 +60,7 @@ header { display: flex; align-items: center; justify-content: space-between; pad
 .brand-name { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
 .header-actions { display: flex; gap: 8px; }
 .icon-btn { width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text-soft); }
-.icon-btn svg, .tile-icon svg, .entry-icon svg, .empty-icon svg, .paid-btn svg { width: 19px; height: 19px; }
+.icon-btn svg, .tile-icon svg, .entry-icon svg, .empty-icon svg { width: 19px; height: 19px; }
 .tile-icon svg { width: 18px; height: 18px; color: white; }
 .entry-icon svg { width: 19px; height: 19px; }
 svg.ic { width: 18px; height: 18px; display: block; }
@@ -93,7 +93,7 @@ svg.ic { width: 18px; height: 18px; display: block; }
 .legend-item { display: flex; align-items: center; gap: 6px; }
 .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
 
-.entry { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 10px; }
+.entry { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; }
 .entry-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
 .entry-body { flex: 1; min-width: 0; }
 .entry-name { font-size: 14px; font-weight: 600; margin: 0 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -103,9 +103,6 @@ svg.ic { width: 18px; height: 18px; display: block; }
 .entry-flag { font-size: 10px; font-weight: 600; padding: 3px 7px; border-radius: 6px; margin-top: 4px; display: inline-block; }
 .entry-flag-warn { background: var(--warn-soft); color: var(--warn); }
 .entry-flag-ok { background: var(--ok-soft); color: var(--ok); }
-.entry-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
-.paid-btn { border: none; background: var(--ok-soft); color: var(--ok); font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
-.paid-btn svg { width: 12px; height: 12px; }
 
 .empty-state { padding: 40px 20px; text-align: center; color: var(--text-soft); font-size: 13px; }
 .empty-state .empty-icon { margin-bottom: 10px; display: flex; justify-content: center; color: var(--text-soft); }

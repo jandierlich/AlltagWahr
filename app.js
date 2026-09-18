@@ -113,14 +113,6 @@
   }
   function isTicking(e) { return e.noticeDays != null && e.autoRenew !== false; }
 
-  function advanceDate(iso, rhythm) {
-    var d = new Date(iso + 'T00:00:00');
-    if (rhythm === 'monthly') d.setMonth(d.getMonth() + 1);
-    else if (rhythm === 'quarterly') d.setMonth(d.getMonth() + 3);
-    else d.setFullYear(d.getFullYear() + 1);
-    return d.toISOString().slice(0, 10);
-  }
-
   /* ---------- Render ---------- */
   function render() {
     renderHero();
@@ -256,34 +248,19 @@
         }
       }
       return '' +
-        '<div class="entry nm-raised" data-id="' + e.id + '">' +
+        '<div class="entry nm-raised" data-id="' + e.id + '" data-edit="' + e.id + '">' +
         '<div class="entry-icon" style="background:' + c.color + '38;color:' + c.color + ';">' + ico(c.icon) + '</div>' +
-        '<div class="entry-body" data-edit="' + e.id + '">' +
+        '<div class="entry-body">' +
         '<p class="entry-name">' + escapeHtml(e.name) + '</p>' +
         '<p class="entry-meta">' + fmtDate(e.nextDate) + ' · ' + dueLabel + metaExtra + '</p>' +
         noticeFlag +
         '</div>' +
-        '<div class="entry-actions">' +
         '<div class="entry-amount">' + fmtEUR(e.amount) + '<small>' + rhythmLabel + '</small></div>' +
-        '<button class="paid-btn" data-paid="' + e.id + '">' + ico('check') + ' bezahlt</button>' +
-        '</div>' +
         '</div>';
     }).join('');
 
     Array.prototype.forEach.call(list.querySelectorAll('[data-edit]'), function (node) {
       node.addEventListener('click', function () { openSheet(node.getAttribute('data-edit')); });
-    });
-    Array.prototype.forEach.call(list.querySelectorAll('[data-paid]'), function (node) {
-      node.addEventListener('click', function (ev) {
-        ev.stopPropagation();
-        var id = node.getAttribute('data-paid');
-        var e = entries.find(function (x) { return x.id === id; });
-        if (!e) return;
-        e.nextDate = advanceDate(e.nextDate, e.rhythm);
-        saveEntries();
-        render();
-        showToast(e.name + ' als bezahlt markiert – nächste Fälligkeit ' + fmtDate(e.nextDate));
-      });
     });
   }
 
