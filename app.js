@@ -10,6 +10,7 @@
     moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
     check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
     chevronLeft: '<path d="M15 5l-7 7 7 7"/>',
+    close: '<path d="M6 6l12 12M18 6L6 18"/>',
     folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>',
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
@@ -58,6 +59,7 @@
   var sortByDate = true;
   var searchQuery = '';
   var filterCategory = null;
+  var filterMode = null; // null | 'notice'
 
   function uid() { return 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8); }
 
@@ -157,6 +159,9 @@
     var sorted = entries.slice().sort(function (a, b) { return daysUntil(a.nextDate) - daysUntil(b.nextDate); });
     var next = sorted[0];
     document.getElementById('nextPayment').textContent = next ? next.name + ' · ' + fmtDate(next.nextDate) : '–';
+    var extraPayments = Math.max(0, sorted.length - 1);
+    document.getElementById('nextPaymentExtra').textContent = extraPayments > 0
+      ? '+ ' + extraPayments + ' weitere' : '';
 
     var withNotice = entries.filter(isTicking)
       .map(function (e) { return { e: e, deadline: noticeDeadline(e) }; })
@@ -166,6 +171,9 @@
     radarEl.textContent = withNotice.length === 0
       ? 'Keine Fristen nah'
       : withNotice[0].e.name + ' · ' + (withNotice[0].deadline <= 0 ? 'Frist läuft!' : 'noch ' + withNotice[0].deadline + ' Tg.');
+    var extraNotice = Math.max(0, withNotice.length - 1);
+    document.getElementById('cancelRadarExtra').textContent = extraNotice > 0
+      ? '+ ' + extraNotice + ' weitere' : '';
   }
 
   /* Eigener SVG-Donut-Chart – keine externe Bibliothek, kein Netzwerkzugriff */
@@ -214,6 +222,7 @@
   function renderList() {
     var list = document.getElementById('entryList');
     var filtered = entries.filter(function (e) {
+      if (filterMode === 'notice' && !(isTicking(e) && noticeDeadline(e) <= 21)) return false;
       if (filterCategory && e.category !== filterCategory) return false;
       if (searchQuery && e.name.toLowerCase().indexOf(searchQuery) === -1) return false;
       return true;
@@ -430,6 +439,21 @@
     searchQuery = ev.target.value.trim().toLowerCase();
     renderList();
   });
+  function updateFilterStatus() {
+    var bar = document.getElementById('filterStatus');
+    if (filterMode === 'notice') {
+      document.getElementById('filterStatusText').textContent = 'Gefiltert: bald kündbar';
+      bar.style.display = 'flex';
+    } else {
+      bar.style.display = 'none';
+    }
+  }
+  document.getElementById('clearFilterMode').addEventListener('click', function () {
+    filterMode = null;
+    updateFilterStatus();
+    renderList();
+  });
+
   function renderFilterBar() {
     var wrap = document.getElementById('categoryFilterBar');
     var all = '<div class="filter-chip' + (filterCategory === null ? ' selected' : '') + '" data-filter="">Alle</div>';
@@ -440,11 +464,38 @@
     Array.prototype.forEach.call(wrap.querySelectorAll('.filter-chip'), function (chip) {
       chip.addEventListener('click', function () {
         filterCategory = chip.getAttribute('data-filter') || null;
+        filterMode = null;
+        updateFilterStatus();
         renderFilterBar();
         renderList();
       });
     });
   }
+
+  /* ---------- Kacheln antippbar: zur Liste springen ---------- */
+  function scrollToList() {
+    document.getElementById('entryList').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  document.getElementById('tileNextPayment').addEventListener('click', function () {
+    filterMode = null;
+    filterCategory = null;
+    searchQuery = '';
+    document.getElementById('searchInput').value = '';
+    sortByDate = true;
+    document.getElementById('sortToggle').textContent = 'nach Datum';
+    updateFilterStatus();
+    renderFilterBar();
+    renderList();
+    scrollToList();
+  });
+  document.getElementById('tileCancelRadar').addEventListener('click', function () {
+    filterMode = 'notice';
+    filterCategory = null;
+    updateFilterStatus();
+    renderFilterBar();
+    renderList();
+    scrollToList();
+  });
 
   /* ---------- Settings-Sheet (Export/Import/Reminders/Kategorien) ---------- */
   var settingsBackdrop = document.getElementById('settingsBackdrop');
@@ -652,6 +703,7 @@
   document.getElementById('settingsBtn').innerHTML = ico('gear');
   document.getElementById('tileIconCalendar').innerHTML = ico('calendar');
   document.getElementById('tileIconClock').innerHTML = ico('clock');
+  document.getElementById('clearFilterMode').innerHTML = ico('close');
 
   /* ---------- Service Worker (Offline/PWA) ---------- */
   if ('serviceWorker' in navigator) {

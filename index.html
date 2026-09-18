@@ -36,15 +36,17 @@
 </div>
 
 <div class="tiles">
-  <div class="tile nm-raised">
+  <div class="tile nm-raised nm-pressable" id="tileNextPayment" role="button" tabindex="0">
     <div class="tile-icon violet" id="tileIconCalendar"></div>
     <p class="tile-title">Nächste Zahlung</p>
     <p class="tile-value" id="nextPayment">–</p>
+    <p class="tile-extra" id="nextPaymentExtra"></p>
   </div>
-  <div class="tile nm-raised">
+  <div class="tile nm-raised nm-pressable" id="tileCancelRadar" role="button" tabindex="0">
     <div class="tile-icon warn" id="tileIconClock"></div>
     <p class="tile-title">Kündigungs-Radar</p>
     <p class="tile-value" id="cancelRadar">Keine Fristen nah</p>
+    <p class="tile-extra" id="cancelRadarExtra"></p>
   </div>
 </div>
 
@@ -60,6 +62,10 @@
 </div>
 <div class="field" style="margin-bottom:10px;"><input id="searchInput" type="text" placeholder="Eintrag suchen …"></div>
 <div class="filter-bar" id="categoryFilterBar"></div>
+<div class="filter-status" id="filterStatus" style="display:none;">
+  <span id="filterStatusText"></span>
+  <button type="button" id="clearFilterMode"></button>
+</div>
 <div id="entryList"></div>
 
 <footer class="legal-links">
