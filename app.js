@@ -199,7 +199,9 @@
       var du = daysUntil(e.nextDate);
       var dueLabel = du === 0 ? 'heute' : du < 0 ? 'überfällig' : 'in ' + du + ' Tg.';
       var rhythmLabel = { monthly: '/Monat', quarterly: '/Quartal', yearly: '/Jahr' }[e.rhythm];
-      var metaExtra = e.contractTerm ? ' · Laufzeit ' + e.contractTerm + ' Mon.' : '';
+      var metaExtra = '';
+      if (e.contractEnd) metaExtra += ' · Vertragsende ' + fmtDate(e.contractEnd);
+      if (e.contractTerm) metaExtra += ' · Laufzeit ' + e.contractTerm + ' Mon.';
       var noticeFlag = '';
       if (e.noticeDays != null) {
         var deadline = du - e.noticeDays;
@@ -308,6 +310,7 @@
       document.getElementById('fRhythm').value = e.rhythm;
       document.getElementById('fDate').value = e.nextDate;
       document.getElementById('fNotice').value = e.noticeDays != null ? e.noticeDays : '';
+      document.getElementById('fContractEnd').value = e.contractEnd || '';
       document.getElementById('fContractTerm').value = e.contractTerm != null ? e.contractTerm : '';
       buildCatPicker(e.category);
       deleteRow.style.display = 'flex';
@@ -336,6 +339,7 @@
       category: selectedChip ? selectedChip.getAttribute('data-cat') : FALLBACK_CATEGORY_ID,
       nextDate: document.getElementById('fDate').value,
       noticeDays: document.getElementById('fNotice').value ? parseInt(document.getElementById('fNotice').value, 10) : null,
+      contractEnd: document.getElementById('fContractEnd').value || null,
       contractTerm: document.getElementById('fContractTerm').value ? parseInt(document.getElementById('fContractTerm').value, 10) : null
     };
     if (!data.name || !data.nextDate) return;
