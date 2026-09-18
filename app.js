@@ -364,9 +364,7 @@
     } else {
       document.getElementById('sheetTitle').textContent = 'Neuer Eintrag';
       form.reset();
-      document.getElementById('fDate').value = new Date().toISOString().slice(0, 10);
-      document.getElementById('fContractEnd').value = new Date().toISOString().slice(0, 10);
-      buildCatPicker(categories[0] ? categories[0].id : FALLBACK_CATEGORY_ID);
+      buildCatPicker(null);
       deleteRow.style.display = 'none';
     }
     sheetBackdrop.classList.add('open');
@@ -380,11 +378,12 @@
   form.addEventListener('submit', function (ev) {
     ev.preventDefault();
     var selectedChip = document.querySelector('#catPicker .cat-chip.selected');
+    if (!selectedChip) { showToast('Bitte eine Kategorie wählen'); return; }
     var data = {
       name: document.getElementById('fName').value.trim(),
       amount: parseFloat(document.getElementById('fAmount').value) || 0,
       rhythm: document.getElementById('fRhythm').value,
-      category: selectedChip ? selectedChip.getAttribute('data-cat') : FALLBACK_CATEGORY_ID,
+      category: selectedChip.getAttribute('data-cat'),
       nextDate: document.getElementById('fDate').value,
       noticeDays: document.getElementById('fNotice').value ? parseInt(document.getElementById('fNotice').value, 10) : null,
       contractEnd: document.getElementById('fContractEnd').value || null,
