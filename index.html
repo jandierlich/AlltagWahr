@@ -32,6 +32,7 @@
   <p class="hero-label">Monatliche Belastung</p>
   <p class="hero-amount" id="monthlyTotal">0,00 €</p>
   <p class="hero-sub" id="yearlyHint">≈ 0,00 € im Jahr</p>
+  <span class="hero-compare" id="monthCompare" style="display:none;"></span>
 </div>
 
 <div class="tiles">
@@ -57,6 +58,8 @@
   <p class="section-title">Alle Einträge</p>
   <button class="section-action" id="sortToggle">nach Datum</button>
 </div>
+<div class="field" style="margin-bottom:10px;"><input id="searchInput" type="text" placeholder="Eintrag suchen …"></div>
+<div class="filter-bar" id="categoryFilterBar"></div>
 <div id="entryList"></div>
 
 <footer class="legal-links">
@@ -64,7 +67,7 @@
 </footer>
 
 <button class="fab" id="addBtn" aria-label="Neuer Eintrag">+</button>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast"><span id="toastMsg"></span><button id="toastAction" class="toast-action" style="display:none;"></button></div>
 
 <!-- Eintrag anlegen/bearbeiten -->
 <div class="sheet-backdrop" id="sheetBackdrop">
@@ -90,6 +93,13 @@
       </div>
       <div class="field"><label for="fContractEnd">Vertragsende (optional)</label><div class="date-wrap nm-inset"><input id="fContractEnd" type="date"></div></div>
       <div class="field"><label for="fContractTerm">Vertragslaufzeit (Monate, optional)</label><input id="fContractTerm" type="number" min="0" placeholder="z. B. 24"></div>
+      <div class="settings-row" style="padding:8px 4px 14px;">
+        <div>
+          <div class="settings-row-label">Automatische Verlängerung</div>
+          <div class="settings-row-sub">Verlängert sich der Vertrag, wenn nicht rechtzeitig gekündigt wird?</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="fAutoRenew" checked><span class="slider"></span></label>
+      </div>
       <div class="sheet-actions">
         <button type="button" class="btn btn-secondary" id="cancelBtn">Abbrechen</button>
         <button type="submit" class="btn btn-primary">Speichern</button>

@@ -56,6 +56,8 @@
   var selectedIconChoice = CATEGORY_ICON_CHOICES[0];
   var selectedColorChoice = CATEGORY_COLOR_CHOICES[0];
   var sortByDate = true;
+  var searchQuery = '';
+  var filterCategory = null;
 
   function uid() { return 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8); }
 
@@ -103,6 +105,14 @@
   }
   function escapeHtml(s) { return s.replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
+  /* Kündigungsfrist zählt ab dem Vertragsende, falls gesetzt – sonst ab der nächsten Fälligkeit */
+  function noticeDeadline(e) {
+    if (e.noticeDays == null) return null;
+    var basis = e.contractEnd || e.nextDate;
+    return daysUntil(basis) - e.noticeDays;
+  }
+  function isTicking(e) { return e.noticeDays != null && e.autoRenew !== false; }
+
   function advanceDate(iso, rhythm) {
     var d = new Date(iso + 'T00:00:00');
     if (rhythm === 'monthly') d.setMonth(d.getMonth() + 1);
@@ -120,10 +130,35 @@
     checkReminders();
   }
 
+  var SNAPSHOT_KEY = 'alltagwahr_monthly_snapshots_v1';
+  function monthKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+  function prevMonthKey(d) { var p = new Date(d.getFullYear(), d.getMonth() - 1, 1); return monthKey(p); }
+
   function renderHero() {
     var totalMonthly = entries.reduce(function (s, e) { return s + monthlyEquivalent(e); }, 0);
     document.getElementById('monthlyTotal').textContent = fmtEUR(totalMonthly);
     document.getElementById('yearlyHint').textContent = '≈ ' + fmtEUR(totalMonthly * 12) + ' im Jahr';
+
+    var compareEl = document.getElementById('monthCompare');
+    try {
+      var snapshots = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) || '{}');
+      var now = new Date();
+      var thisKey = monthKey(now);
+      var lastKey = prevMonthKey(now);
+      if (snapshots[lastKey] != null) {
+        var diff = totalMonthly - snapshots[lastKey];
+        if (Math.abs(diff) < 0.005) {
+          compareEl.textContent = '± 0 € ggü. Vormonat';
+        } else {
+          compareEl.textContent = (diff > 0 ? '+ ' : '− ') + fmtEUR(Math.abs(diff)) + ' ggü. Vormonat';
+        }
+        compareEl.style.display = 'inline-block';
+      } else {
+        compareEl.style.display = 'none';
+      }
+      snapshots[thisKey] = totalMonthly;
+      localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshots));
+    } catch (e) { compareEl.style.display = 'none'; }
   }
 
   function renderTiles() {
@@ -131,8 +166,8 @@
     var next = sorted[0];
     document.getElementById('nextPayment').textContent = next ? next.name + ' · ' + fmtDate(next.nextDate) : '–';
 
-    var withNotice = entries.filter(function (e) { return e.noticeDays != null; })
-      .map(function (e) { return { e: e, deadline: daysUntil(e.nextDate) - e.noticeDays }; })
+    var withNotice = entries.filter(isTicking)
+      .map(function (e) { return { e: e, deadline: noticeDeadline(e) }; })
       .filter(function (x) { return x.deadline <= 21; })
       .sort(function (a, b) { return a.deadline - b.deadline; });
     var radarEl = document.getElementById('cancelRadar');
@@ -186,11 +221,20 @@
 
   function renderList() {
     var list = document.getElementById('entryList');
+    var filtered = entries.filter(function (e) {
+      if (filterCategory && e.category !== filterCategory) return false;
+      if (searchQuery && e.name.toLowerCase().indexOf(searchQuery) === -1) return false;
+      return true;
+    });
     if (entries.length === 0) {
       list.innerHTML = '<div class="empty-state nm-raised"><div class="empty-icon">' + ico('folder') + '</div>Noch keine Einträge.<br>Tippe unten rechts auf + zum Start.</div>';
       return;
     }
-    var sorted = entries.slice().sort(function (a, b) {
+    if (filtered.length === 0) {
+      list.innerHTML = '<div class="empty-state nm-raised"><div class="empty-icon">' + ico('folder') + '</div>Keine Einträge gefunden.</div>';
+      return;
+    }
+    var sorted = filtered.slice().sort(function (a, b) {
       if (sortByDate) return daysUntil(a.nextDate) - daysUntil(b.nextDate);
       return monthlyEquivalent(b) - monthlyEquivalent(a);
     });
@@ -203,9 +247,13 @@
       if (e.contractEnd) metaExtra += ' · Vertragsende ' + fmtDate(e.contractEnd);
       if (e.contractTerm) metaExtra += ' · Laufzeit ' + e.contractTerm + ' Mon.';
       var noticeFlag = '';
-      if (e.noticeDays != null) {
-        var deadline = du - e.noticeDays;
-        if (deadline <= 21) noticeFlag = '<span class="entry-flag">Kündigungsfrist ' + (deadline <= 0 ? 'jetzt' : 'in ' + deadline + ' Tg.') + '</span>';
+      var deadline = noticeDeadline(e);
+      if (deadline != null) {
+        if (isTicking(e) && deadline <= 21) {
+          noticeFlag = '<span class="entry-flag entry-flag-warn">Kündigungsfrist ' + (deadline <= 0 ? 'jetzt' : 'in ' + deadline + ' Tg.') + '</span>';
+        } else if (!isTicking(e)) {
+          noticeFlag = '<span class="entry-flag entry-flag-ok">endet automatisch' + (e.contractEnd ? ' am ' + fmtDate(e.contractEnd) : '') + '</span>';
+        }
       }
       return '' +
         '<div class="entry nm-raised" data-id="' + e.id + '">' +
@@ -243,10 +291,31 @@
   var toastTimer = null;
   function showToast(msg) {
     var t = document.getElementById('toast');
-    t.textContent = msg;
+    document.getElementById('toastMsg').textContent = msg;
+    var actionBtn = document.getElementById('toastAction');
+    actionBtn.style.display = 'none';
+    actionBtn.onclick = null;
     t.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+  function showUndoToast(msg, onUndo) {
+    var t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    var actionBtn = document.getElementById('toastAction');
+    actionBtn.textContent = 'Rückgängig';
+    actionBtn.style.display = 'inline-block';
+    actionBtn.onclick = function () {
+      t.classList.remove('show');
+      clearTimeout(toastTimer);
+      onUndo();
+    };
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      t.classList.remove('show');
+      actionBtn.onclick = null;
+    }, 5000);
   }
 
   /* ---------- Reminders (lokale Benachrichtigung bei offener App) ---------- */
@@ -263,8 +332,8 @@
         } catch (err) { /* iOS erlaubt Notifications nur aus installierter PWA heraus */ }
         already.push(key);
       }
-      if (e.noticeDays != null) {
-        var deadline = du - e.noticeDays;
+      if (isTicking(e)) {
+        var deadline = noticeDeadline(e);
         var nkey = 'notice:' + key;
         if (deadline <= 3 && deadline >= 0 && already.indexOf(nkey) === -1) {
           try {
@@ -312,6 +381,7 @@
       document.getElementById('fNotice').value = e.noticeDays != null ? e.noticeDays : '';
       document.getElementById('fContractEnd').value = e.contractEnd || '';
       document.getElementById('fContractTerm').value = e.contractTerm != null ? e.contractTerm : '';
+      document.getElementById('fAutoRenew').checked = e.autoRenew !== false;
       buildCatPicker(e.category);
       deleteRow.style.display = 'flex';
     } else {
@@ -341,7 +411,8 @@
       nextDate: document.getElementById('fDate').value,
       noticeDays: document.getElementById('fNotice').value ? parseInt(document.getElementById('fNotice').value, 10) : null,
       contractEnd: document.getElementById('fContractEnd').value || null,
-      contractTerm: document.getElementById('fContractTerm').value ? parseInt(document.getElementById('fContractTerm').value, 10) : null
+      contractTerm: document.getElementById('fContractTerm').value ? parseInt(document.getElementById('fContractTerm').value, 10) : null,
+      autoRenew: document.getElementById('fAutoRenew').checked
     };
     if (!data.name || !data.nextDate) return;
     if (editingId) {
@@ -358,10 +429,18 @@
 
   document.getElementById('deleteBtn').addEventListener('click', function () {
     if (!editingId) return;
+    var idx = entries.findIndex(function (x) { return x.id === editingId; });
+    if (idx === -1) return;
+    var removed = entries[idx];
     entries = entries.filter(function (x) { return x.id !== editingId; });
     saveEntries();
     render();
     closeSheet();
+    showUndoToast(removed.name + ' gelöscht', function () {
+      entries.splice(Math.min(idx, entries.length), 0, removed);
+      saveEntries();
+      render();
+    });
   });
 
   document.getElementById('sortToggle').addEventListener('click', function () {
@@ -369,6 +448,27 @@
     this.textContent = sortByDate ? 'nach Datum' : 'nach Betrag';
     renderList();
   });
+
+  /* ---------- Suche & Kategorie-Filter ---------- */
+  document.getElementById('searchInput').addEventListener('input', function (ev) {
+    searchQuery = ev.target.value.trim().toLowerCase();
+    renderList();
+  });
+  function renderFilterBar() {
+    var wrap = document.getElementById('categoryFilterBar');
+    var all = '<div class="filter-chip' + (filterCategory === null ? ' selected' : '') + '" data-filter="">Alle</div>';
+    var chips = categories.map(function (c) {
+      return '<div class="filter-chip' + (filterCategory === c.id ? ' selected' : '') + '" data-filter="' + c.id + '">' + ico(c.icon) + '<span>' + escapeHtml(c.label) + '</span></div>';
+    }).join('');
+    wrap.innerHTML = all + chips;
+    Array.prototype.forEach.call(wrap.querySelectorAll('.filter-chip'), function (chip) {
+      chip.addEventListener('click', function () {
+        filterCategory = chip.getAttribute('data-filter') || null;
+        renderFilterBar();
+        renderList();
+      });
+    });
+  }
 
   /* ---------- Settings-Sheet (Export/Import/Reminders/Kategorien) ---------- */
   var settingsBackdrop = document.getElementById('settingsBackdrop');
@@ -438,6 +538,7 @@
 
   /* ---------- Kategorien-Verwaltung ---------- */
   function renderCategoryManager() {
+    renderFilterBar();
     var wrap = document.getElementById('categoryManager');
     wrap.innerHTML = categories.map(function (c) {
       var canDelete = c.id !== FALLBACK_CATEGORY_ID;
@@ -588,5 +689,6 @@
   loadEntries();
   saveEntries();
   paintThemeIcon();
+  renderFilterBar();
   render();
 })();
